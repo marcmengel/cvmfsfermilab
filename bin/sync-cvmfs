@@ -1,0 +1,42 @@
+#!/bin/bash
+
+TOP=/grid/fermiapp/cvmfsfermilab
+
+ME=sync-cvmfs
+
+usage()
+{
+    echo "Usage: $ME fermilab_project" >&2
+    exit 1
+}
+
+if [ $# != 1 ]; then
+    usage
+fi
+
+PROJECT="$1"
+TRIGDIR=$TOP/triggers
+if [ ! -d $TRIGDIR/$PROJECT ]; then
+    echo "$ME: invalid project; $TRIGDIR/$PROJECT does not exist" >&2
+    exit 1
+fi
+
+(echo at `date` on `hostname`;echo "  by "`who am i`) >$TRIGDIR/$PROJECT/update
+if [ "$?" != 0 ]; then
+    echo "$ME: error creating trigger file" >&2
+    exit 1
+fi
+
+echo "Publish of $PROJECT triggered, update should start within 5 minutes"
+echo "Watching log, you may safely abort this command"
+
+# reopen file every 2 seconds otherwise changes aren't seen over NFS
+# run in background and exit when this process exits
+tail -n 0 -f $TOP/logs/sync-cvmfs-fermilab.log --pid $$ -s 2 --max-unchanged-stats=1 &
+
+while [ -f $TRIGDIR/$PROJECT/update ] || [ -f $TRIGDIR/cvmfsfermilab/synclock ]
+do
+    sleep 5
+done
+# allow enough time for the log info to show up via NFS
+sleep 10

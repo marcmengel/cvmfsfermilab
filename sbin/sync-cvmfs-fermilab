@@ -1,0 +1,99 @@
+#!/bin/bash
+# script to sync /cvmfs/fermilab.opensciencegrid.org from /grid/fermiapp
+# Written by Dave Dykstra 10/1/2014
+
+PROJTOP=/grid/fermiapp
+TOP=/grid/fermiapp/cvmfsfermilab
+
+exec 3>&2 >>$TOP/logs/sync-cvmfs-fermilab.log 2>&1
+
+# if project name includes "products/" sync only that subdirectory,
+#   and if it doesn't, sync both top level and in products
+PROJECTS="cvmfsfermilab products/common products/larsoft"
+REPO=fermilab.opensciencegrid.org
+
+if [ "$1" != "-a" ]; then
+    TRIGGERED=""
+    for P in $PROJECTS; do
+	BASEP=`basename $P`
+	if [ -f $TOP/triggers/$BASEP/update ]; then
+	    TRIGGERED="$TRIGGERED $P"
+	    echo "Triggered $BASEP `cat $TOP/triggers/$BASEP/update`"
+	fi
+    done
+    if [ -z "$TRIGGERED" ]; then
+	echo "Nothing to do at `date`"
+	exit
+    fi
+    PROJECTS="`echo $TRIGGERED`"
+fi
+
+LOCKFILE=$TOP/triggers/cvmfsfermilab/synclock
+TMPLOCK="$LOCKFILE.$$"
+trap "rm -f $TMPLOCK" 0
+# the 22nd field in /proc/<pid>/stat is a timestamp in jiffies since system boot
+echo "$PPID `awk '{print $22}' /proc/$PPID/stat`" >$TMPLOCK
+
+if ! ln $TMPLOCK $LOCKFILE 2>/dev/null; then
+    read OTHERPID OTHERSTART <$LOCKFILE
+    if [ -z "$OTHERPID" ] || ! kill -0 "$OTHERPID" 2>/dev/null || \
+	    [ "$OTHERSTART" != "`awk '{print $22}' /proc/$OTHERPID/stat`" ]; then
+	rm -f $LOCKFILE
+        if ! ln $TMPLOCK $LOCKFILE 2>/dev/null; then
+            echo;echo "Attempted to break lock $LOCKFILE from $OTHERPID at `date` but failed, giving up"
+            exit 1
+        fi
+        echo;echo "Broke lock $LOCKFILE from $OTHERPID at `date` because process was not running"
+    else
+	# for debugging -- normally don't want the noise every 5 minutes during
+	#  a publish
+	# echo;echo "Cannot create $LOCKFILE at `date`, already created by running process $OTHERPID"
+        exit
+    fi
+fi
+rm -f $TMPLOCK
+trap "rm -f $LOCKFILE" 0
+
+echo;echo "Starting sync of $REPO for $PROJECTS at `date`"
+cvmfs_server transaction $REPO
+RET=$?
+if [ $RET != 0 ]; then
+    echo "Error starting transaction" >&3
+    exit $RET
+fi
+
+for PROJECT in $PROJECTS; do 
+    RET=0
+    DIRS="$PROJECT"
+    if [ "${PROJECT#*/}" = "$PROJECT" ]; then
+	DIRS="$DIRS products/$PROJECT"
+    fi
+    for DIR in $DIRS; do
+	if [ ! -d $PROJTOP/$DIR ]; then
+	    continue
+	fi
+	echo;echo "rsyncing $PROJTOP/$DIR at `date`"
+	cvmfs_rsync -av --stats --delete --exclude "/*/nightly/" --exclude "/*/nightly.version" $PROJTOP/$DIR/ /cvmfs/$REPO/$DIR/
+	RET=$?
+	if [ "$RET" != 0 ]; then
+	    break
+	fi
+    done
+    # remove trigger whether rsync succeeds or fails
+    rm -f $TOP/triggers/`basename $PROJECT`/update
+    if [ $RET != 0 ]; then
+	# sleep a little while in case this was an interactive abort
+	# this helps prevent umount errors during the abort
+	sleep 1
+	cvmfs_server abort -f $REPO
+	echo "Error rsyncing $PROJECT" >&3
+	exit $RET
+    fi
+done
+echo;echo "Publishing at `date`"
+cvmfs_server publish $REPO
+if [ $RET != 0 ]; then
+    echo "Error publishing" >&3
+    exit $RET
+fi
+echo;echo "Finished sync at `date`"
