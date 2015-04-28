@@ -22,7 +22,7 @@ if [ "$1" != "-a" ]; then
 	fi
     done
     if [ -z "$TRIGGERED" ]; then
-	echo "Nothing to do at `date`"
+	# echo "Nothing to do at `date`"
 	exit
     fi
     PROJECTS="`echo $TRIGGERED`"
