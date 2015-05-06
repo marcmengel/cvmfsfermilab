@@ -9,7 +9,7 @@ exec 3>&2 >>$TOP/logs/sync-cvmfs-fermilab.log 2>&1
 
 # if project name includes "products/" sync only that subdirectory,
 #   and if it doesn't, sync both top level and in products
-PROJECTS="cvmfsfermilab products/common products/larsoft genie"
+PROJECTS="products/common products/larsoft genie"
 REPO=fermilab.opensciencegrid.org
 
 if [ "$1" != "-a" ]; then
