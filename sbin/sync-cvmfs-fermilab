@@ -92,6 +92,7 @@ for PROJECT in $PROJECTS; do
 done
 echo;echo "Publishing at `date`"
 cvmfs_server publish $REPO
+RET=$?
 if [ $RET != 0 ]; then
     echo "Error publishing" >&3
     exit $RET
