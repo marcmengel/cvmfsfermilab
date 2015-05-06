@@ -28,7 +28,7 @@ if [ "$?" != 0 ]; then
 fi
 
 echo "Publish of $PROJECT triggered, update should start within 5 minutes"
-echo "Watching log, you may safely abort this command"
+echo "Watching log, you may safely abort this command and publish will continue"
 
 # reopen file every 2 seconds otherwise changes aren't seen over NFS
 # run in background and exit when this process exits
