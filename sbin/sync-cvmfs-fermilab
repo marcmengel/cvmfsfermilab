@@ -55,15 +55,17 @@ rm -f $TMPLOCK
 trap "rm -f $LOCKFILE" 0
 
 echo;echo "Starting sync of $REPO for $PROJECTS at `date`"
-cvmfs_server transaction $REPO
-RET=$?
-if [ $RET != 0 ]; then
-    echo "Error starting transaction" >&3
-    exit $RET
-fi
 
+RETS=0
 for PROJECT in $PROJECTS; do 
-    RET=0
+    cvmfs_server transaction $REPO
+    RET=$?
+    if [ $RET != 0 ]; then
+	echo "Error starting transaction for $PROJECT" >&3
+	let RETS+=$RET
+	continue
+    fi
+
     DIRS="$PROJECT"
     if [ "${PROJECT#*/}" = "$PROJECT" ]; then
 	DIRS="$DIRS products/$PROJECT"
@@ -85,16 +87,22 @@ for PROJECT in $PROJECTS; do
 	# sleep a little while in case this was an interactive abort
 	# this helps prevent umount errors during the abort
 	sleep 1
+	echo;echo "Aborting publish of $PROJECT at `date`"
 	cvmfs_server abort -f $REPO
 	echo "Error rsyncing $PROJECT" >&3
-	exit $RET
+	let RETS+=$RET
+	continue
+    fi
+
+    echo;echo "Publishing $PROJECT at `date`"
+    cvmfs_server publish $REPO
+    RET=$?
+    if [ $RET != 0 ]; then
+	echo "Error publishing $PROJECT" >&3
+	let RETS+=$RET
+	continue
     fi
 done
-echo;echo "Publishing at `date`"
-cvmfs_server publish $REPO
-RET=$?
-if [ $RET != 0 ]; then
-    echo "Error publishing" >&3
-    exit $RET
-fi
+
 echo;echo "Finished sync at `date`"
+exit $RETS
