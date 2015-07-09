@@ -61,6 +61,7 @@ for PROJECT in $PROJECTS; do
     cvmfs_server transaction $REPO
     RET=$?
     if [ $RET != 0 ]; then
+	echo "Error starting transaction for $PROJECT" >&2
 	echo "Error starting transaction for $PROJECT" >&3
 	let RETS+=$RET
 	continue
@@ -89,6 +90,7 @@ for PROJECT in $PROJECTS; do
 	sleep 1
 	echo;echo "Aborting publish of $PROJECT at `date`"
 	cvmfs_server abort -f $REPO
+	echo "Error rsyncing $PROJECT" >&2
 	echo "Error rsyncing $PROJECT" >&3
 	let RETS+=$RET
 	continue
@@ -98,11 +100,12 @@ for PROJECT in $PROJECTS; do
     cvmfs_server publish $REPO
     RET=$?
     if [ $RET != 0 ]; then
+	echo "Error publishing $PROJECT" >&2
 	echo "Error publishing $PROJECT" >&3
 	let RETS+=$RET
 	continue
     fi
 done
 
-echo;echo "Finished sync at `date`"
+echo;echo "Finished sync at `date` with exit code $RETS"
 exit $RETS
