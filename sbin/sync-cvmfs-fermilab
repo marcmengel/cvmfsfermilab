@@ -88,9 +88,9 @@ for PROJECT in $PROJECTS; do
 	# sleep a little while in case this was an interactive abort
 	# this helps prevent umount errors during the abort
 	sleep 1
-	echo;echo "Aborting publish of $PROJECT at `date`"
+	echo
+	echo "Rsync of $PROJECT failed at `date`, aborting" >&2
 	cvmfs_server abort -f $REPO
-	echo "Error rsyncing $PROJECT" >&2
 	echo "Error rsyncing $PROJECT" >&3
 	let RETS+=$RET
 	continue
@@ -100,7 +100,9 @@ for PROJECT in $PROJECTS; do
     cvmfs_server publish $REPO
     RET=$?
     if [ $RET != 0 ]; then
-	echo "Error publishing $PROJECT" >&2
+	echo
+	echo "Publish of $PROJECT failed at `date`, aborting" >&2
+	cvmfs_server abort -f $REPO
 	echo "Error publishing $PROJECT" >&3
 	let RETS+=$RET
 	continue
