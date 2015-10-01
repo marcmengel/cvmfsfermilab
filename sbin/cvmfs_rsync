@@ -64,29 +64,18 @@ if [ -f /cvmfs/$REPO/.cvmfsdirtab ]; then
 	    # $PAT matches $DESTDIR, look in all matching directories
 	    let NDESTFIELDS+=1
 	    SUBPAT="`echo "$FULLPAT"|cut -d/ -f$NDESTFIELDS-`"
-	    DESTPATS=""
 	    if [ -n "$SUBPAT" ]; then
-		# need to try both with and without leading dot
-		#   because that's what .cvmfsdirtab patterns match
-		DESTPATS="$DESTDIR/$SUBPAT $DESTDIR/.$SUBPAT"
+		SUBPAT="/$SUBPAT"
 	    fi
-	    for D in `echo $DESTPATS 2>/dev/null`; do
-		if [ ! -d "$D" ]; then
-		    # probably didn't expand because there were only dot files
-		    continue
-		fi
-		SUBD="${D#$DESTDIR/}"
-		if [ "$SUBD" = "." ] || [ "$SUBD" = ".." ]; then
-		    # ignore . and ..
-		    continue
-		fi
-		if [ "$SUBD" = "$D" ]; then
+	    for D in `echo $DESTDIR$SUBPAT 2>/dev/null`; do
+		SRCSUBD="${D#$DESTDIR/}"
+		if [ "$SRCSUBD" = "$D" ]; then
 		    # it didn't really match, the .cvmfsdirtab pattern
 		    #  included other directories outside of this one
 		    # (shouldn't happen because of $SUBPAT, but just in case)
 		    continue
 		fi
-		if [ -f "$D/.cvmfscatalog" ] && [ ! -d "$SRC/$SUBD" ]; then
+		if [ -f $D/.cvmfscatalog ] && [ ! -d $SRC/$SRCSUBD ]; then
 		    echo "removing .cvmfscatalog from deleted ${D#$DEST/}"
 		    rm -f $D/.cvmfscatalog
 		fi
