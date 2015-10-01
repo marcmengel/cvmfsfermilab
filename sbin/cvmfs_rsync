@@ -67,7 +67,8 @@ if [ -f /cvmfs/$REPO/.cvmfsdirtab ]; then
 	    if [ -n "$SUBPAT" ]; then
 		SUBPAT="/$SUBPAT"
 	    fi
-	    for D in `echo $DESTDIR$SUBPAT 2>/dev/null`; do
+	    # enable dotglob because .cvmfsdirtab matches dots
+	    for D in `shopt -s dotglob;echo $DESTDIR$SUBPAT 2>/dev/null`; do
 		SRCSUBD="${D#$DESTDIR/}"
 		if [ "$SRCSUBD" = "$D" ]; then
 		    # it didn't really match, the .cvmfsdirtab pattern
