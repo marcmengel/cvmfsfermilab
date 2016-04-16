@@ -12,13 +12,12 @@ exec 3>&2 >>$TOP/logs/sync-cvmfs-fermilab.log 2>&1
 PROJECTS="products/common products/larsoft genie"
 REPO=fermilab.opensciencegrid.org
 
+TRIGGERED=""
 if [ "$1" != "-a" ]; then
-    TRIGGERED=""
     for P in $PROJECTS; do
 	BASEP=`basename $P`
 	if [ -f $TOP/triggers/$BASEP/update ]; then
 	    TRIGGERED="$TRIGGERED $P"
-	    echo "Triggered $BASEP `cat $TOP/triggers/$BASEP/update`"
 	fi
     done
     if [ -z "$TRIGGERED" ]; then
@@ -54,7 +53,15 @@ fi
 rm -f $TMPLOCK
 trap "rm -f $LOCKFILE" 0
 
-echo;echo "Starting sync of $REPO for $PROJECTS at `date`"
+echo
+
+# print these trigger messages after getting the lock to avoid duplicates
+for T in $TRIGGERED; do
+    BASEP=`basename $T`
+    echo "Triggered $BASEP `cat $TOP/triggers/$BASEP/update`"
+done
+
+echo "Starting sync of $REPO for $PROJECTS at `date`"
 
 RETS=0
 for PROJECT in $PROJECTS; do 
