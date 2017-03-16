@@ -31,7 +31,7 @@ LOCKFILE=$TOP/triggers/cvmfsfermilab/synclock
 TMPLOCK="$LOCKFILE.$$"
 trap "rm -f $TMPLOCK" 0
 # the 22nd field in /proc/<pid>/stat is a timestamp in jiffies since system boot
-echo "$PPID `awk '{print $22}' /proc/$PPID/stat`" >$TMPLOCK
+echo "$$ `awk '{print $22}' /proc/$PPID/stat`" >$TMPLOCK
 
 if ! ln $TMPLOCK $LOCKFILE 2>/dev/null; then
     read OTHERPID OTHERSTART <$LOCKFILE
