@@ -2,8 +2,8 @@
 # script to sync /cvmfs/fermilab.opensciencegrid.org from /grid/fermiapp
 # Written by Dave Dykstra 10/1/2014
 
-PROJTOP=/grid/fermiapp
 TOP=/grid/fermiapp/cvmfsfermilab
+PROJTOP=$TOP/publish
 
 exec 3>&2 >>$TOP/logs/sync-cvmfs-fermilab.log 2>&1
 
@@ -79,10 +79,10 @@ for PROJECT in $PROJECTS; do
 	DIRS="$DIRS products/$PROJECT"
     fi
     for DIR in $DIRS; do
-	if [ ! -d $PROJTOP/$DIR ]; then
+	if [ ! -d $PROJTOP/$DIR/ ]; then
 	    continue
 	fi
-	echo;echo "rsyncing $PROJTOP/$DIR at `date`"
+	echo;echo "rsyncing $PROJTOP/$DIR/ at `date`"
 	cvmfs_rsync -av --stats --delete --exclude "/*/nightly/" --exclude "/*/nightly.version" $PROJTOP/$DIR/ /cvmfs/$REPO/$DIR/
 	RET=$?
 	if [ "$RET" != 0 ]; then
