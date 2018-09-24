@@ -21,7 +21,7 @@ if [ ! -d $TRIGDIR/$PROJECT ]; then
     exit 1
 fi
 
-(echo at `date` on `hostname`;echo "  by "`who am i`) >$TRIGDIR/$PROJECT/update
+(echo at `date` on `hostname`;echo "  by "`who am i` `klist 2>/dev/null|sed -n 's/Default principal: //p'`) >$TRIGDIR/$PROJECT/update
 if [ "$?" != 0 ]; then
     echo "$ME: error creating trigger file" >&2
     exit 1
