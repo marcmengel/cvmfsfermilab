@@ -21,9 +21,16 @@ if [ ! -d $TRIGDIR/$PROJECT ]; then
     exit 1
 fi
 
+TRIGFILE=$TRIGDIR/$PROJECT/update
+if [ -f $TRIGFILE ]; then
+    echo "$ME: an update for $PROJECT is already in progress" >&2
+    echo "Requested `cat $TRIGFILE`"
+    exit 2
+fi
+
 (echo at `date` on `hostname`
 echo "  by "`who am i` `klist 2>/dev/null|sed -n 's/Default principal: //p'`
-) >$TRIGDIR/$PROJECT/update
+) >$TRIGFILE
 if [ "$?" != 0 ]; then
     echo "$ME: error creating trigger file" >&2
     exit 1
@@ -36,7 +43,7 @@ echo "Watching log, you may safely abort this command and publish will continue"
 # run in background and exit when this process exits
 tail -n 0 -f $TOP/logs/sync-cvmfs-fermilab.log --pid $$ -s 2 --max-unchanged-stats=1 &
 
-while [ -f $TRIGDIR/$PROJECT/update ] || [ -f $TRIGDIR/cvmfsfermilab/synclock ]
+while [ -f $TRIGFILE ] || [ -f $TRIGDIR/cvmfsfermilab/synclock ]
 do
     sleep 5
 done
