@@ -1,0 +1,36 @@
+#!/bin/bash
+
+TOP=/grid/fermiapp/cvmfsfermilab
+
+ME=spack-cvmfs
+
+usage()
+{
+    echo "Usage: $ME fermilab_project install|uninstall \"spac-spec\"" >&2
+    exit 1
+}
+
+if [ $# != 1 ]; then
+    usage
+fi
+
+PROJECT="$1"
+WORKFILE=$TOP/triggers/$PROJECT/workfile
+if [ ! -d $TRIGDIR/$PROJECT ]; then
+    echo "$ME: invalid project; $TRIGDIR/$PROJECT does not exist" >&2
+    exit 1
+fi
+
+case $2 in
+install)
+   echo "i $3" >> $WORKFILE
+;;
+uninstall)
+   echo "u $3" >> $WORKFILE
+;;
+*)
+   usage
+;;
+esac 
+
+exec sync-cvmfs $PROJECT

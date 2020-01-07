@@ -9,11 +9,17 @@ exec 3>&2 >>$TOP/logs/sync-cvmfs-fermilab.log 2>&1
 
 # if project name includes "products/" sync only that subdirectory,
 #   and if it doesn't, sync both top level and in products
-PROJECTS="products/common products/artdaq ebd genie noble"
+#
+# if it is "packages/" use "update_spack" tools to update it
+PROJECTS="products/common products/artdaq ebd genie noble packages/common"
 REPO=fermilab.opensciencegrid.org
 
 TRIGGERED=""
 if [ "$1" != "-a" ]; then
+    # note: this shares a trigger for products/common and packages/common
+    # etc.  This is on purpose , so we sync ups new products into the spack
+    # area.  It does make an extra rsync of products/common when new 
+    # spack packags are added.
     for P in $PROJECTS; do
 	BASEP=`basename $P`
 	if [ -f $TOP/triggers/$BASEP/update ]; then
@@ -74,21 +80,35 @@ for PROJECT in $PROJECTS; do
 	continue
     fi
 
-    DIRS="$PROJECT"
-    if [ "${PROJECT#*/}" = "$PROJECT" ]; then
-	DIRS="$DIRS products/$PROJECT"
-    fi
-    for DIR in $DIRS; do
-	if [ ! -d $PROJTOP/$DIR/ ]; then
-	    continue
-	fi
-	echo;echo "rsyncing $PROJTOP/$DIR/ at `date`"
-	cvmfs_rsync -av --stats --delete --exclude "/*/nightly/" --exclude "/*/nightly.version" $PROJTOP/$DIR/ /cvmfs/$REPO/$DIR/
-	RET=$?
-	if [ "$RET" != 0 ]; then
-	    break
-	fi
-    done
+    case "$PROJECT" in
+    packages/*)
+        SPACK_TOOLS=/grid/fermiapp/products/common/prd/spack_infrastructure/current/NULL
+        PATH=$SPACK_TOOLS/bin:$PATH
+        WORKFILE=$TOP/triggers/$BASEP/workfile
+        update_spack $WORKFILE /cvmfs/$REPO/$PROJECT/spack/current/NULL
+        update_ups_to_spack  /cvmfs/$REPO/$PROJECT/spack/current/NULL
+    ;;
+
+    *)
+        DIRS="$PROJECT"
+        if [ "${PROJECT#*/}" = "$PROJECT" ]; then
+            DIRS="$DIRS products/$PROJECT"
+        fi
+        for DIR in $DIRS; do
+            if [ ! -d $PROJTOP/$DIR/ ]; then
+                continue
+            fi
+            echo;echo "rsyncing $PROJTOP/$DIR/ at `date`"
+            cvmfs_rsync -av --stats --delete --exclude "/*/nightly/" --exclude "/*/nightly.version" $PROJTOP/$DIR/ /cvmfs/$REPO/$DIR/
+            RET=$?
+            if [ "$RET" != 0 ]; then
+                break
+            fi
+        done
+
+    ;;
+    esac
+
     # remove trigger whether rsync succeeds or fails
     rm -f $TOP/triggers/`basename $PROJECT`/update
     if [ $RET != 0 ]; then
@@ -114,6 +134,7 @@ for PROJECT in $PROJECTS; do
 	let RETS+=$RET
 	continue
     fi
+ 
 done
 
 echo;echo "Finished sync at `date` with exit code $RETS"
